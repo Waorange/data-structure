@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include "stack.h"
 
 
 static void _Swap(int * a, int * b)
@@ -9,6 +11,8 @@ static void _Swap(int * a, int * b)
 	*a = *b;
 	*b = temp;
 }
+
+/////////////////////////////////////////////////////////
 //从小到大
 void InsretSort(int * a, size_t n)
 {
@@ -37,6 +41,8 @@ void InsretSort(int * a, size_t n)
 	}
 }
 
+
+//////////////////////////////////////////////////////
 //从小到大
 void ShallSort(int * a, size_t n)
 {
@@ -69,7 +75,7 @@ void ShallSort(int * a, size_t n)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////////
 void SelectSort(int * a, size_t n)
 {
 	assert(a);
@@ -100,6 +106,7 @@ void SelectSort(int * a, size_t n)
 	}
 }
 
+///////////////////////////////////////////////////////////////
 static void AdjustDown(int * a, size_t n, int root)
 {
 	assert(a);
@@ -140,6 +147,7 @@ void HeapSort(int * a, size_t n)
 	}
 }
 
+/////////////////////////////////////////////////////////////////////
 static int GetMin(int * a, int left, int right)
 {
 	assert(a);
@@ -182,7 +190,8 @@ static int GetMin(int * a, int left, int right)
 	}
 }
 
-int Divide1(int * a, int left, int right)
+//左右指针法
+int PartSort1(int * a, int left, int right)
 {
 	assert(a);
 	//使用三数取中法规避数据一边倒
@@ -212,7 +221,7 @@ int Divide1(int * a, int left, int right)
 }
 
 //挖坑法
-int Divide2(int * a, int left, int right)
+int PartSort2(int * a, int left, int right)
 {
 	assert(a);
 	assert(a);
@@ -240,7 +249,7 @@ int Divide2(int * a, int left, int right)
 }
 
 //前后指针法
-int Divide3(int * a, int left, int right)
+int PartSort3(int * a, int left, int right)
 {
 	assert(a);
 	int prev = left - 1, cur = left;
@@ -264,11 +273,161 @@ void QuickSort(int * a, int left, int right)
 	{
 		return;
 	}
-	int div = Divide3(a, left, right);
+	int div = PartSort1(a, left, right);
 	QuickSort(a, left, div - 1);
 	QuickSort(a, div + 1, right);
 }
 
+void QuickSortNR(int * a, int left, int right)
+{
+	assert(a);
+	Stack S;
+	StackInit(&S, 10);
+
+	//先入左然后入右即取出时相反
+	StackPush(&S, left);
+	StackPush(&S, right);
+
+	while (!StackEmpty(&S))	
+	{
+		//出栈时先出右再出左
+		int _right = StackTop(&S);
+		StackPop(&S);
+		int _left = StackTop(&S);
+		StackPop(&S);
+
+		int div = PartSort1(a, _left, _right);
+
+		if (_left < div - 1)
+		{
+			StackPush(&S, _left);
+			StackPush(&S, div - 1);
+		}
+		if (div + 1 < _right)
+		{
+			StackPush(&S, div + 1);
+			StackPush(&S, _right);
+		}
+	}
+}
+
+void _MergeSort(int * a, int left, int right, int * tmp)
+{
+	assert(a);
+	if (left >= right)
+	{
+		return;
+	}
+	int mid = left + ((right - left) >> 1);
+
+	//分为[left mid] [mid + 1 right]两个区间
+	_MergeSort(a, left, mid, tmp);
+	_MergeSort(a, mid + 1, right, tmp);
+
+	//至此左右区间均有序
+	int left_a = left, right_a = mid;
+	int left_b = mid + 1, right_b = right;
+	int index = left;
+	while (left_a <= right_a && left_b <= right_b)
+	{
+		//从小到大排序
+		if (a[left_a] > a[left_b])
+		{
+			tmp[index++] = a[left_b++];
+		}
+		else
+		{
+			tmp[index++] = a[left_a++];
+		}
+	}
+	while (left_a <= right_a)
+	{
+		tmp[index++] = a[left_a++];
+	}
+	while (left_b <= right_b)
+	{
+		tmp[index++] = a[left_b++];
+	}
+	memcpy(&a[left], &tmp[left], sizeof(int)* (right - left + 1));
+}
+
+void MergeSort(int * a, int left, int right)
+{
+	assert(a);
+	int * tmp = (int *)malloc(sizeof(int) * (right - left + 1));
+	_MergeSort(a, left, right, tmp);
+	free(tmp);
+}
+
+void MergeSortNR(int * a, int left, int right)
+{
+	assert(a);
+	int * tmp = (int *)malloc(sizeof(int) * (right - left + 1));
+
+	for(int gap = 1; gap <= (right - left + 1); gap <<= 1)
+	{
+		int cur = left;
+		while (cur <= right)
+		{
+			//计算区间中点分为两个区间 [cur mid - 1] [mid mid + gap - 1]
+			int mid = cur + gap;
+
+			
+			int left_a = cur, right_a = mid - 1;
+			if (right_a >= right)
+			{
+				break;
+			}
+
+			int left_b = mid, right_b = left_b + gap - 1;
+			if (right_b > right)
+			{
+				right_b = right;
+			}
+
+			int index = cur;
+			while (left_a <= right_a && left_b <= right_b)
+			{
+				//从小到大排序
+				if (a[left_a] > a[left_b])
+				{
+					tmp[index++] = a[left_b++];
+				}
+				else
+				{
+					tmp[index++] = a[left_a++];
+				}
+			}
+
+			while (left_a <= right_a)
+			{
+				tmp[index++] = a[left_a++];
+			}
+			while (left_b <= right_b)
+			{
+				tmp[index++] = a[left_b++];
+			}
+			int count_bit = (gap << 1) > (right - left + 1) ? (right - left + 1) : (gap << 1);
+			memcpy(&a[cur], &tmp[cur], sizeof(int)* count_bit);
+			cur += (gap << 1);
+		}//while(cur <= right)
+	}
+	free(tmp);
+}
+
+
+////////////////////////////////////////////////////////////////////
+void TestMergeSort()
+{
+	//int a[] = { 2, 5, 8, 4, 3, 1, 9, 6 };
+	int a[] = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+	MergeSortNR(a, 0, sizeof(a) / sizeof(int) - 1);
+	//MergeSort(a, 0, sizeof(a) / sizeof(int)- 1);
+	for (size_t i = 0; i < sizeof(a) / sizeof(int); ++i)
+	{
+		printf("%d ", a[i]);
+	}
+}
 
 void TestHeapSort()
 {
@@ -283,9 +442,11 @@ void TestHeapSort()
 
 void TestQuickSort()
 {
-	int a[] = { 2, 5, 8, 4, 3, 1, 9, 6 };
-	//int a[] = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
-	QuickSort(a, 0,  sizeof(a) / sizeof(int) - 1);
+	//int a[] = { 2, 5, 8, 4, 3, 1, 9, 6 };
+	int a[] = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+	//QuickSort(a, 0,  sizeof(a) / sizeof(int) - 1);
+	QuickSortNR(a, 0,  sizeof(a) / sizeof(int) - 1);
+
 	for (size_t i = 0; i < sizeof(a) / sizeof(int); ++i)
 	{
 		printf("%d ", a[i]);
@@ -329,7 +490,8 @@ int main()
 	//TestShallSort();
 	//TestSelectSort();
 	//TestHeapSort();
-	TestQuickSort();
+	//TestQuickSort();
+	TestMergeSort();
 	system("pause");
 	return 0;
 }
